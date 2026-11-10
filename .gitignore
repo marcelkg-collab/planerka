@@ -1,0 +1,5 @@
+# результат сборки (python planerka/build.py)
+planerka/app.html
+planerka/build.txt
+# папка данных по умолчанию: задачи, ключи, пароли — в git никогда
+planerka-data/

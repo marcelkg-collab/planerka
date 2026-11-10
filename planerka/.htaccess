@@ -1,0 +1,5 @@
+# Apache (нужен mod_rewrite): все адреса /planerka/* ведут в index.php — он сам раздаёт страницу,
+# API, сервис-воркер, значки, постер и манифест. На nginx этот файл не действует (см. PLANERKA.md).
+RewriteEngine On
+RewriteRule ^index\.php$ - [L]
+RewriteRule ^ index.php [L,QSA]

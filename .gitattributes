@@ -1,0 +1,4 @@
+# все текстовые файлы — с LF на любой ОС (контрольные суммы в PLANERKA.md считаются по LF)
+* text=auto eol=lf
+*.png binary
+*.woff2 binary
