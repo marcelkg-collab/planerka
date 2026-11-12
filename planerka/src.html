@@ -1485,7 +1485,7 @@ body{padding-inline:0}
 </script>
 <!-- voice-input:begin -->
 <script>
-/* Голосовой ввод: когда курсор стоит в текстовом поле, справа внизу появляется кнопка с микрофоном.
+/* Голосовой ввод: когда курсор стоит в текстовом поле, в правом нижнем углу САМОГО поля появляется кнопка с микрофоном.
    Нажал — говоришь — текст встаёт в поле (русский язык); нажал ещё раз — стоп. Работает там, где браузер
    умеет распознавать речь (Chrome на ПК и Android, Safari на iPhone и Mac); где не умеет — кнопки нет,
    остаётся диктовка с клавиатуры телефона. Один и тот же код встроен в Фокус и во все Планёрки. */
@@ -1497,9 +1497,26 @@ body{padding-inline:0}
   btn.type = 'button';
   btn.setAttribute('aria-label', 'Голосовой ввод');
   btn.title = 'Голосовой ввод';
-  btn.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg>';
-  btn.style.cssText = 'position:fixed;right:16px;bottom:calc(150px + env(safe-area-inset-bottom));z-index:2147483000;width:56px;height:56px;border-radius:50%;border:0;' +
-    'display:none;align-items:center;justify-content:center;cursor:pointer;background:#AD4218;color:#fff;box-shadow:0 8px 22px -6px rgba(0,0,0,.45);touch-action:manipulation';
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg>';
+  btn.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483000;width:40px;height:40px;border-radius:50%;border:0;padding:0;' +
+    'display:none;align-items:center;justify-content:center;cursor:pointer;background:#AD4218;color:#fff;box-shadow:0 4px 12px -4px rgba(0,0,0,.45);touch-action:manipulation';
+  var padWas = '', tick = null;
+  // кнопка стоит внутри поля, в правом нижнем углу; поле получает отступ справа, чтобы текст не уходил под кнопку
+  function place() {
+    if (!field || !field.isConnected) return;
+    var r = field.getBoundingClientRect();
+    if (r.width < 60 || r.bottom < 0 || r.top > innerHeight) { btn.style.visibility = 'hidden'; return; }
+    btn.style.visibility = 'visible';
+    btn.style.left = Math.round(r.right - 44) + 'px';
+    btn.style.top = Math.round(r.bottom - 44 + (r.height < 48 ? (48 - r.height) / 2 : 0)) + 'px';
+  }
+  function show(el) {
+    if (field && field !== el) field.style.paddingRight = padWas;
+    if (field !== el) { padWas = el.style.paddingRight; el.style.paddingRight = '50px'; }
+    field = el; btn.style.display = 'flex'; place();
+    clearInterval(tick); tick = setInterval(place, 250);
+  }
+  function hide() { clearInterval(tick); btn.style.display = 'none'; if (field) field.style.paddingRight = padWas; field = null; }
   document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(btn); });
   if (document.body) document.body.appendChild(btn);
 
@@ -1538,11 +1555,13 @@ body{padding-inline:0}
   btn.addEventListener('pointerdown', function (e) { e.preventDefault(); });
   btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
   btn.addEventListener('click', function () { if (on) stop(); else start(); if (field) field.focus({ preventScroll: true }); });
+  window.addEventListener('resize', place); window.addEventListener('scroll', place, true);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', place);
   document.addEventListener('focusin', function (e) {
-    if (ok(e.target)) { clearTimeout(hideT); if (field !== e.target && on) stop(); field = e.target; btn.style.display = 'flex'; }
+    if (ok(e.target)) { clearTimeout(hideT); if (field !== e.target && on) stop(); show(e.target); }
   });
   document.addEventListener('focusout', function () {
-    hideT = setTimeout(function () { var a = document.activeElement; if (!ok(a)) { if (on) stop(); btn.style.display = 'none'; field = null; } }, 150);
+    hideT = setTimeout(function () { var a = document.activeElement; if (!ok(a)) { if (on) stop(); hide(); } }, 150);
   });
 })();
 </script>
