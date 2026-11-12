@@ -1483,3 +1483,67 @@ body{padding-inline:0}
   render();refresh();checkNav();
 })();
 </script>
+<!-- voice-input:begin -->
+<script>
+/* Голосовой ввод: когда курсор стоит в текстовом поле, справа внизу появляется кнопка с микрофоном.
+   Нажал — говоришь — текст встаёт в поле (русский язык); нажал ещё раз — стоп. Работает там, где браузер
+   умеет распознавать речь (Chrome на ПК и Android, Safari на iPhone и Mac); где не умеет — кнопки нет,
+   остаётся диктовка с клавиатуры телефона. Один и тот же код встроен в Фокус и во все Планёрки. */
+(function () {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR || window.__voiceInput) return;
+  window.__voiceInput = 1;
+  var btn = document.createElement('button'), field = null, rec = null, on = false, base = '', hideT = null;
+  btn.type = 'button';
+  btn.setAttribute('aria-label', 'Голосовой ввод');
+  btn.title = 'Голосовой ввод';
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg>';
+  btn.style.cssText = 'position:fixed;right:16px;bottom:calc(150px + env(safe-area-inset-bottom));z-index:2147483000;width:56px;height:56px;border-radius:50%;border:0;' +
+    'display:none;align-items:center;justify-content:center;cursor:pointer;background:#AD4218;color:#fff;box-shadow:0 8px 22px -6px rgba(0,0,0,.45);touch-action:manipulation';
+  document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(btn); });
+  if (document.body) document.body.appendChild(btn);
+
+  function ok(el) {
+    if (!el || el.disabled || el.readOnly) return false;
+    if (el.tagName === 'TEXTAREA') return true;
+    if (el.tagName !== 'INPUT') return false;
+    var t = (el.getAttribute('type') || 'text').toLowerCase();
+    return (t === 'text' || t === 'search') && el.inputMode !== 'numeric' && !/login|user|pass|phone|tel/i.test(el.name + ' ' + el.autocomplete);
+  }
+  function paint() { btn.style.background = on ? '#A1202C' : '#AD4218'; btn.setAttribute('aria-pressed', on ? 'true' : 'false'); btn.title = on ? 'Остановить запись' : 'Голосовой ввод'; }
+  function put(text) {
+    if (!field) return;
+    var v = base + (base && text && !/\s$/.test(base) ? ' ' : '') + text;
+    var proto = field.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(field, v);   // так значение видят и React, и обычные поля
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  function stop() { on = false; paint(); if (rec) { try { rec.stop(); } catch (e) {} } }
+  function start() {
+    if (!field) return;
+    rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true; rec.continuous = true;
+    base = field.value; var finalText = '';
+    rec.onresult = function (e) {
+      var interim = '';
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript; else interim += e.results[i][0].transcript;
+      }
+      put((finalText + interim).replace(/\s+/g, ' ').trim());
+    };
+    rec.onerror = function (e) { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') alert('Разреши доступ к микрофону для этого сайта в настройках браузера.'); stop(); };
+    rec.onend = function () { on = false; paint(); };
+    try { rec.start(); on = true; paint(); } catch (e) { stop(); }
+  }
+  // нажатие на кнопку не должно уводить курсор из поля
+  btn.addEventListener('pointerdown', function (e) { e.preventDefault(); });
+  btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  btn.addEventListener('click', function () { if (on) stop(); else start(); if (field) field.focus({ preventScroll: true }); });
+  document.addEventListener('focusin', function (e) {
+    if (ok(e.target)) { clearTimeout(hideT); if (field !== e.target && on) stop(); field = e.target; btn.style.display = 'flex'; }
+  });
+  document.addEventListener('focusout', function () {
+    hideT = setTimeout(function () { var a = document.activeElement; if (!ok(a)) { if (on) stop(); btn.style.display = 'none'; field = null; } }, 150);
+  });
+})();
+</script>
+<!-- voice-input:end -->
